@@ -1,6 +1,10 @@
 package com.leiteorz.xcrashtest
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Environment
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -22,13 +26,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.leiteorz.xcrashtest.ui.theme.XCrashTestTheme
 import xcrash.XCrash
+import java.io.File
 
 class MainActivity : ComponentActivity() {
+    companion object{
+        const val TAG = "XCrashTest"
+    }
+
+    // 需要申请的权限
+    private val permissions = arrayListOf<String>().apply {
+        add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        initPermission()    // 申请权限
+        initXCrash()
+
         setContent {
             XCrashTestTheme {
                 Surface(
@@ -39,6 +59,34 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * 动态申请权限
+     */
+    private fun initPermission(){
+        val unPermissions = ArrayList<String>()
+        for (permission in permissions){
+            if (ContextCompat.checkSelfPermission(applicationContext, permission) != PackageManager.PERMISSION_GRANTED){
+                unPermissions.add(permission)
+            }
+        }
+        if (unPermissions.size > 0){
+            ActivityCompat.requestPermissions(this, unPermissions.toTypedArray(), 0)
+        }
+    }
+
+    /**
+     * 初始化XCrash
+     */
+    private fun initXCrash(){
+        val path = "${Environment.getExternalStorageDirectory().path}/Documents/XCrash"
+        XCrashTool.setCrashLogPath(path)
+        XCrashTool.setCrashCallBack { Log.e(TAG, "XCrash接口回调") }
+        XCrashTool.setJvmLogMaxCount(3)
+        XCrashTool.setNativeLogMaxCount(3)
+        XCrashTool.setAnrLogMaxCount(3)
+        XCrashTool.initXCrash(applicationContext)
     }
 }
 
